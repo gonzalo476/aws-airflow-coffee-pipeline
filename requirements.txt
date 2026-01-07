@@ -1,13 +1,11 @@
 # core
 pandas==2.3.3
-duckdb==1.4.3
-numpy==2.4.0
 
 # http requests
 requests==2.32.5
 
-# machine learning
-scikit-learn==1.8.0
-
 # visualization
 streamlit==1.52.2
+
+# soilgrid
+rasterio==1.4.4
