@@ -32,7 +32,7 @@ def coffee_pipeline():
     def process_and_upload_weather():
         cities = ["Naha", "Okinawa", "Nago", "Kunigami"]
         s3_hook = S3Hook(aws_conn_id="aws_conn")
-        date = datetime.now().strftime('%Y/%m/%d')
+        date = datetime.now().strftime('%Y-%m-%d')
 
         for city in cities:
             csv_path = f"/opt/airflow/data/raw/weather/weather_{city}.csv"
