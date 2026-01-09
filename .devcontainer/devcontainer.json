@@ -1,0 +1,30 @@
+{
+    "name": "Airflow Dev Container",
+    "dockerComposeFile": [
+        "../docker-compose.yaml"
+    ],
+    "service": "airflow-apiserver",
+    "workspaceFolder": "/workspace",
+    "mounts": [
+        "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+    ],
+    "remoteUser": "root",
+    "containerEnv": {
+        "SHELL": "/bin/bash"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "github.copilot",
+                "github.copilot-chat"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "python.defaultInterpreterPath": "/home/airflow/.local/bin/python"
+            }
+        }
+    }
+}

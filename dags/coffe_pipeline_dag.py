@@ -8,10 +8,11 @@ import os
 
 BUCKET_RAW = Variable.get("COFFEE_S3_RAW_ZONE")
 
-weather_csvs = Dataset("file:///opt/airflow/data/raw/weather_*.csv")
+weather_csvs = Dataset("file:///opt/airflow/data/raw/weather/weather_*.csv")
 weather_s3 = Dataset(f"s3://{BUCKET_RAW}/weather/")
 tiff_csv = Dataset("file:///opt/airflow/data/raw/soil/soilgrid.csv")
 tiff_s3 = Dataset(f"s3://{BUCKET_RAW}/soil/")
+
 
 @dag(
     dag_id='coffee_pipeline',
@@ -64,7 +65,7 @@ def coffee_pipeline():
     @task(outlets=[tiff_s3])
     def process_and_upload_tiff():
         s3_hook = S3Hook(aws_conn_id="aws_conn")
-        date = datetime.now().strftime('%Y/%m/%d')
+        date = datetime.now().strftime('%Y-%m-%d')
         df = pd.read_csv(f"/opt/airflow/data/raw/soil/soilgrid.csv")
 
         parquet_path = "/tmp/soilgrid.parquet"
