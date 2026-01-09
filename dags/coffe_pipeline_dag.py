@@ -10,9 +10,11 @@ BUCKET_RAW = Variable.get("COFFEE_S3_RAW_ZONE")
 
 weather_csvs = Dataset("file:///opt/airflow/data/raw/weather/weather_*.csv")
 weather_s3 = Dataset(f"s3://{BUCKET_RAW}/weather/")
+
 tiff_csv = Dataset("file:///opt/airflow/data/raw/soil/soilgrid.csv")
 tiff_s3 = Dataset(f"s3://{BUCKET_RAW}/soil/")
 
+disasters_s3 = Dataset(f"s3://{BUCKET_RAW}/disasters/")
 
 @dag(
     dag_id='coffee_pipeline',
@@ -66,7 +68,7 @@ def coffee_pipeline():
     def process_and_upload_tiff():
         s3_hook = S3Hook(aws_conn_id="aws_conn")
         date = datetime.now().strftime('%Y-%m-%d')
-        df = pd.read_csv(f"/opt/airflow/data/raw/soil/soilgrid.csv")
+        df = pd.read_csv("/opt/airflow/data/raw/soil/soilgrid.csv")
 
         parquet_path = "/tmp/soilgrid.parquet"
         df.to_parquet(parquet_path, compression='snappy', index=False)
@@ -82,12 +84,33 @@ def coffee_pipeline():
         os.remove(parquet_path)
         print(f"Done: soilgrid")
 
-        print(f"All files uploaded to s3://{BUCKET_RAW}/weather/{date}/")
+        print(f"All files uploaded to s3://{BUCKET_RAW}/soil/{date}/")
+
+    @task(outlets=[disasters_s3])
+    def process_and_upload_disasters():
+        s3_hook = S3Hook(aws_conn_id="aws_conn")
+        date = datetime.now().strftime('%Y-%m-%d')
+        df = pd.read_csv("/opt/airflow/data/raw/disasters/typhoon_track_data.csv")
+
+        parquet_path = "/tmp/typhoon.parquet"
+        df.to_parquet(parquet_path, compression="snappy", index=False)
+
+        s3_key = f'disasters/{date}/typhoon.parquet'
+        s3_hook.load_file(
+            filename=parquet_path,
+            key=s3_key,
+            bucket_name=BUCKET_RAW,
+            replace=True
+        )
+        os.remove(parquet_path)
+        print(f"Done: disasters")
+        print(f"All files uploaded to s3://{BUCKET_RAW}/disasters/{date}/")
 
     extract_weather = extract_weather_task()
     upload_weather = process_and_upload_weather()
     extract_tiff = process_tiff_task()
     upload_tiff = process_and_upload_tiff()
+    upload_disasters = process_and_upload_disasters()
 
     extract_weather >> upload_weather
     extract_tiff >> upload_tiff
