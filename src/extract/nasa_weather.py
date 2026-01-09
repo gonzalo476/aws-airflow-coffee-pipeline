@@ -1,5 +1,3 @@
-
-
 def extract_weather(start_date: str, end_date: str, output_path: str) -> None:
     import time, requests
     import pandas as pd
