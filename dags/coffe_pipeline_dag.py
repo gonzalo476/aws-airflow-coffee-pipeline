@@ -28,7 +28,7 @@ def coffee_pipeline():
     @task(outlets=[weather_csvs])
     def extract_weather_task():
         from src.extract.nasa_weather import extract_weather
-        extract_weather("20140101", "20241231", "/opt/airflow/data/raw")
+        extract_weather("20140101", "20241231", "/opt/airflow/data/raw/weather")
 
     @task(outlets=[weather_s3])
     def process_and_upload_weather():
