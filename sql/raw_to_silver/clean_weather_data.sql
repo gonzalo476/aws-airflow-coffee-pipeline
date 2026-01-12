@@ -78,7 +78,7 @@ WHERE LOWER(TRIM(city)) NOT IN ('naha', 'okinawa', 'nago', 'kunigami')
 CREATE TABLE db_coffee_clean.weather_data_silver
 WITH (
     format = 'PARQUET',
-    external_location = 's3://coffee-clean-zone-gonz67/weather/',
+    external_location = '<RAW S3 BUCKET>',
     parquet_compression = 'SNAPPY',
     partitioned_by = ARRAY['year']
 ) AS
