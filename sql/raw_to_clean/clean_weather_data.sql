@@ -73,23 +73,65 @@ FROM weather
 WHERE LOWER(TRIM(city)) NOT IN ('naha', 'okinawa', 'nago', 'kunigami')
     OR city IS NULL;
 
--- create silver weather table
-CREATE TABLE db_coffee_clean.weather_data_silver
+-- create cleaned weather table
+CREATE TABLE db_coffee_clean.weather_data
 WITH (
     format = 'PARQUET',
-    external_location = '<RAW S3 BUCKET>',
+    external_location = '',
     parquet_compression = 'SNAPPY',
     partitioned_by = ARRAY['year']
 ) AS
 SELECT
+    -- date standarization
     CAST(index AS DATE) AS capture_date,
-    CAST(t2m AS DOUBLE) AS t2m,
-    CAST(t2m_min AS DOUBLE) AS t2m_min,
-    CAST(t2m_max AS DOUBLE) AS t2m_max,
-    CAST(prectotcorr AS DOUBLE) AS prectotcorr,
-    CAST(rh2m AS DOUBLE) AS rh2m,
+
+    -- Metrics cleaning
+    -- t2m
+    CASE
+        WHEN TRY_CAST(t2m AS DOUBLE) BETWEEN -100 AND 400 THEN CAST(t2m AS DOUBLE)
+        ELSE NULL
+    END AS t2m,
+
+    -- t2m_min
+    CASE
+        WHEN TRY_CAST(t2m_min AS DOUBLE) BETWEEN -100 AND 400 THEN CAST(t2m_min AS DOUBLE)
+        ELSE NULL
+    END AS t2m_min,
+
+    -- t2m_max
+    CASE
+        WHEN TRY_CAST(t2m_max AS DOUBLE) BETWEEN -100 AND 400 THEN CAST(t2m_max AS DOUBLE)
+        ELSE NULL
+    END AS t2m_max,
+
+    -- logic for rain, no nulls
+    CASE
+        WHEN TRY_CAST(prectotcorr AS DOUBLE) >= 0 THEN CAST(prectotcorr AS DOUBLE)
+        ELSE NULL
+    END AS prectotcorr,
+
+    -- humidity logic
+    CASE
+        WHEN TRY_CAST(rh2m AS DOUBLE) BETWEEN 0 AND 100 THEN CAST(rh2m AS DOUBLE)
+        ELSE NULL
+    END AS rh2m,
+
     CAST(allsky_sfc_sw_dwn AS DOUBLE) AS allsky_sfc_sw_dwn,
-    TRIM(city) AS city,
+
+    -- text standarization
+    LOWER(TRIM(city)) AS city,
+
+    -- partition column
     YEAR(CAST(index AS DATE)) AS "year"
+
 FROM weather
-WHERE index IS NOT NULL;
+WHERE
+    index IS NOT NULL
+
+    AND LOWER(TRIM(city)) IN ('naha', 'okinawa', 'nago', 'kunigami')
+
+    AND (
+        TRY_CAST(t2m_min AS DOUBLE) IS NULL
+        OR TRY_CAST(t2m_max AS DOUBLE) IS NULL
+        OR TRY_CAST(t2m_min AS DOUBLE) <= TRY_CAST(t2m_max AS DOUBLE) 
+    );

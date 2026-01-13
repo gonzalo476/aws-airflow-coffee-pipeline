@@ -62,27 +62,40 @@ ORDER BY 1;
 SELECT DISTINCT country
 FROM disasters;
 
--- create silver disaster table
--- capa silver: year, adm1, disastertype, disasterno, latitude, longitude
-CREATE TABLE db_coffee_clean.disaster_data_silver
+-- create clean disaster table
+-- clean columns: year, adm1, disastertype, disasterno, latitude, longitude
+CREATE TABLE db_coffee_clean.disaster_data
 WITH (
     format = 'PARQUET',
-    external_location = '<RAW S3 BUCKET>',
+    external_location = '',
     parquet_compression = 'SNAPPY'
 ) AS
 SELECT
+    -- year standarization
     CAST(year AS INT) AS year,
-    TRIM(adm1) AS zone,
-    TRIM(disastertype) AS disastertype,
-    TRIM(disasterno) AS disasterno,
-    CAST(latitude AS DOUBLE) AS latitude,
-    CAST(longitude AS DOUBLE) AS longitude
+
+    -- text standarization
+    LOWER(TRIM(adm1)) AS zone,
+    LOWER(TRIM(disastertype)) AS disastertype,
+    LOWER(TRIM(disasterno)) AS disasterno,
+
+    -- coords
+    CASE
+        WHEN TRY_CAST(latitude AS DOUBLE) BETWEEN -90 AND 90 THEN CAST(latitude AS DOUBLE)
+        ELSE NULL
+    END AS latitude,
+
+    CASE
+        WHEN TRY_CAST(longitude AS DOUBLE) BETWEEN -180 AND 180 THEN CAST(longitude AS DOUBLE)
+        ELSE NULL
+    END AS longitude
+
 FROM disasters
 WHERE
     year IS NOT NULL
-    AND year BETWEEN 1960 AND 2018
     AND disastertype IS NOT NULL
     AND adm1 IS NOT NULL
     AND disasterno IS NOT NULL
-    AND latitude BETWEEN -90 AND 90
-    AND longitude BETWEEN -180 AND 180;
+    AND latitude IS NOT NULL
+    AND longitude IS NOT NULL;
+
