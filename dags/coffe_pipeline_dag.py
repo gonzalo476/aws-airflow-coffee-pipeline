@@ -90,12 +90,12 @@ def coffee_pipeline():
     def process_and_upload_disasters():
         s3_hook = S3Hook(aws_conn_id="aws_conn")
         date = datetime.now().strftime('%Y-%m-%d')
-        df = pd.read_csv("/opt/airflow/data/raw/disasters/typhoon_track_data.csv")
+        df = pd.read_csv("/opt/airflow/data/raw/disasters/pend-gdis-1960-2018-disasterlocations.csv")
 
-        parquet_path = "/tmp/typhoon.parquet"
+        parquet_path = "/tmp/disaster_locations.parquet"
         df.to_parquet(parquet_path, compression="snappy", index=False)
 
-        s3_key = f'disasters/{date}/typhoon.parquet'
+        s3_key = f'disasters/{date}/disaster_locations.parquet'
         s3_hook.load_file(
             filename=parquet_path,
             key=s3_key,

@@ -7,7 +7,7 @@ SELECT
     SUM(CASE WHEN prectotcorr IS NULL THEN 1 ELSE 0 END) AS nulls_prectotcorr,
     SUM(CASE WHEN rh2m IS NULL THEN 1 ELSE 0 END) AS nulls_rh2m,
     SUM(CASE WHEN allsky_sfc_sw_dwn IS NULL THEN 1 ELSE 0 END) AS nulls_allsky,
-    SUM(CASE WHEN city IS NULL OR TRIM(city) = '' THEN 1 ELSE 0 END) AS nulls_o_vacios_city
+    SUM(CASE WHEN city IS NULL OR TRIM(city) = '' THEN 1 ELSE 0 END) AS nulls_city
 FROM weather;
 
 -- check t2m in range -150 to 400
@@ -72,7 +72,6 @@ SELECT *
 FROM weather
 WHERE LOWER(TRIM(city)) NOT IN ('naha', 'okinawa', 'nago', 'kunigami')
     OR city IS NULL;
-
 
 -- create silver weather table
 CREATE TABLE db_coffee_clean.weather_data_silver
