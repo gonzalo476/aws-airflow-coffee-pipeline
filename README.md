@@ -77,6 +77,8 @@ This type of pipeline delivers significant value to data consumers by enabling m
 - Data Analysts
 - Data Scientists (ML/AI)
 
+![](./images/reports.png)
+
 ## Limitations and Future Improvements
 
 | Limitation | Impact | Improvements |
