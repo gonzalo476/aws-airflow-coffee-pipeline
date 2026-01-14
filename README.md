@@ -1,89 +1,91 @@
-# Pipeline de Data Engineering — Airflow + Docker + AWS + Power BI
+# Data Engineering Pipeline — Airflow + Docker + AWS + Power BI
 
-Pipeline para la *ingestión*, *transformación* y *exposición* analítica de datos climáticos usando **Airflow**, **AWS** y **Power BI**.
+Pipeline for the *ingestion*, *transformation*, and *analytical exposure* of climate data using **Airflow**, **AWS**, and **Power BI**.
 
-## Contexto del problema
+## Problem Context
 
-El proyecto procesa datos climáticos proveniente de una **API** externa y archivos `csv` históricos. El principal objetivo es **centralizar la información, limpiarla y exponerla** para el análisis. 
+The project processes climate data coming from an external **API** and historical `csv` files. The main objective is to **centralize the information, clean it, and expose it** for analysis.
 
-El proyecto resuelve principalmente en la viabilidad de la producción de café en **Japón**, ya que actualmente es uno de los principales países **asiáticos** que **más café importa**. De acuerdo con el [OEC](https://oec.world/en), en **2023** Japón importó alrededor de **1,500 millones** de dólares en café; esto lo convierte en el país asiático que más café importa en el mundo.
+The project mainly focuses on the feasibility of coffee production in **Japan**, as it is currently one of the leading **Asian** countries that **imports the most coffee**. According to the [OEC](https://oec.world/en), in **2023** Japan imported approximately **USD 1.5 billion** worth of coffee, making it the largest coffee importer in Asia.
 
-Para el origen del dato tenemos datos confiables como:
+The data sources used are:
 
-- [NASA Power API](https://power.larc.nasa.gov/docs/): Para obtener datos meteorológicos desde la **api pública**.
-- [SoilGrids](https://soilgrids.org/): Para obtener datos del suelo en formato `tiff`.
-- [NASA Geocoded Disasters Dataset](https://www.earthdata.nasa.gov/data/catalog/sedac-ciesin-sedac-pend-gdis-1.00): Para obtener datos históricos sobre desastres naturales en formato `csv`. 
+- [NASA Power API](https://power.larc.nasa.gov/docs/): To obtain meteorological data from a **public API**.
+- [SoilGrids](https://soilgrids.org/): To obtain soil data in `tiff` format.
+- [NASA Geocoded Disasters Dataset](https://www.earthdata.nasa.gov/data/catalog/sedac-ciesin-sedac-pend-gdis-1.00): To obtain historical natural disaster data in `csv` format.
 
-## Arquitectura
+## Architecture
 
-La arquitectura sigue un enfoque **ELT** en donde **Airflow** orquesta la ingestión y ejecución de tareas, **S3** actúa como un data lake, **Glue** gestiona las transformaciones y **Athena** actúa para transformar los datos en datos para análisis en **Power BI**.
+The architecture follows an **ELT** approach where **Airflow** orchestrates ingestion and task execution, **S3** acts as a data lake, **Glue** manages transformations, and **Athena** enables analytical querying for consumption in **Power BI**.
 
 ![](./images/coffe-elt-diagram.png)
 
-## ¿Por que Airflow-AWS-PowerBI?
+## Why Airflow – AWS – Power BI?
 
-- **Airflow:** se utiliza para facilitar la ejecución de tareas en secuencia. Permite programar procesos periódicos y orquestar la subida de archivos a S3 una vez que finaliza la extracción. Para este proyecto en particular, fue de gran ayuda para extraer datos de la API, convertirlos a formato Parquet y cargarlos en el *data lake*.
-- **AWS:** se utiliza para procesar los datos una vez almacenados en **S3**, servicio ampliamente utilizado para la creación de *data lakes*. El ecosistema incluye **AWS Glue**, un servicio *serverless* que facilita la limpieza y preparación de datos. **Athena**, por su parte, es un servicio de consultas interactivo que permite analizar la información directamente desde S3. Para funcionar, Athena utiliza el **Data Catalog** de AWS Glue para identificar los esquemas de los datos. Mediante el uso de **Crawlers**, se actualiza dicho catálogo automáticamente, permitiendo que Athena visualice y consulte los datos almacenados en el *data lake*.
-- **Power BI:** se utiliza en la etapa final para la creación de *dashboards*, permitiendo el análisis y la representación gráfica de los datos almacenados en S3. Su capacidad de visualización facilita la toma de decisiones basada en los datos procesados.
+- **Airflow:** Used to orchestrate sequential task execution. It allows scheduling periodic processes and coordinating file uploads to S3 once extraction is complete. In this project, it was especially useful for extracting data from APIs, converting it to Parquet format, and loading it into the *data lake*.
+- **AWS:** Used to process data once stored in **S3**, a widely adopted service for building *data lakes*. The ecosystem includes **AWS Glue**, a *serverless* service that simplifies data cleaning and preparation. **Athena** is an interactive query service that allows data analysis directly on S3. Athena relies on the **AWS Glue Data Catalog** to identify schemas. Using **Crawlers**, the catalog is automatically updated, enabling Athena to discover and query the data stored in the *data lake*.
+- **Power BI:** Used in the final stage to create *dashboards*, enabling data analysis and visualization. Its strong visualization capabilities facilitate data-driven decision-making.
 
-## Flujo de datos
+## Data Flow
 
-Dentro del flujo de datos, manejamos tres formatos distintos: **JSON, CSV y TIFF**. Para la orquestación, utilizamos **Airflow** dentro de un contenedor de **Docker**; esto permite replicar el entorno en cualquier máquina, garantizando la escalabilidad del proyecto.
+Within the data flow, three different formats are handled: **JSON, CSV, and TIFF**. For orchestration, **Airflow** runs inside a **Docker** container, allowing the environment to be replicated on any machine and ensuring project scalability.
 
-- **JSON:** se extraen datos climáticos públicos de la API de la NASA mediante Airflow. El alcance del estudio comprende el periodo 2014-2024 para las ciudades de Okinawa, Naha, Nago y Kunigami. Los datos se transforman a formato **Parquet** y se cargan en **S3**.
-- **CSV:** se procesa un conjunto de datos global de la NASA sobre desastres naturales. Airflow automatiza la conversión de estos archivos a Parquet y su posterior carga en S3.
-- **TIFF:** al ser un formato rasterizado, se emplea la librería **rasterio** para extraer la información almacenada por píxel. Una vez extraídos los datos a un formato tabular, se convierten a Parquet y se almacenan en S3.
+- **JSON:** Public climate data is extracted from the NASA API using Airflow. The scope of the study covers the period 2014–2024 for the cities of Okinawa, Naha, Nago, and Kunigami. The data is transformed into **Parquet** format and loaded into **S3**.
+- **CSV:** A global NASA dataset on natural disasters is processed. Airflow automates the conversion of these files to Parquet and their subsequent upload to S3.
+- **TIFF:** As a raster format, the **rasterio** library is used to extract pixel-level information. Once converted to a tabular format, the data is transformed into Parquet and stored in S3.
 
-Una vez que la data reside en el bucket `s3://raw-zone/`, se configura un **AWS Glue Crawler** para actualizar el **Data Catalog**, permitiendo que **Athena** identifique los esquemas. Mediante consultas SQL en Athena, se realizan las transformaciones y limpieza necesarias, depositando los resultados en el bucket `s3://clean-zone/`. Finalmente, **Power BI** se conecta a esta zona para la visualización y representación de los datos.
+Once the data resides in the `s3://raw-zone/` bucket, an **AWS Glue Crawler** is configured to update the **Data Catalog**, allowing **Athena** to infer schemas. SQL queries in Athena perform the necessary transformations and data cleaning, storing the results in the `s3://clean-zone/` bucket. Finally, **Power BI** connects to this zone for visualization and reporting.
 
-## Modelado de datos
+## Data Modeling
 
-Dentro del *data lake*, existen dos *buckets*, **raw** y **clean**, para almacenar y segmentar los diferentes estados de la información. Esta estructura es fundamental para garantizar la organización y escalabilidad a futuro.
+Within the *data lake*, there are two buckets, **raw** and **clean**, used to store and segment different data states. This structure is essential for long-term organization and scalability.
 
-- **raw-zone:** recibe exclusivamente los datos crudos obtenidos desde la API o archivos CSV descargados de la web. Los datos se mantienen intactos, tal como llegaron, ya que constituyen nuestra 'fuente de verdad'.
-- **clean-zone:** contiene los datos limpios y procesados, listos para que Power BI realice el análisis. En esta zona, los datos se transforman para ser más manejables: se eliminan valores nulos, se corrigen errores de escritura y se optimizan las tablas. En este proyecto, se eliminaron columnas innecesarias y se particionó la información por año como en el caso de los datos de *weather* para mejorar el rendimiento de las consultas.
+- **raw-zone:** Receives only raw data obtained directly from APIs or CSV files downloaded from the web. Data remains untouched, serving as the single source of truth.
+- **clean-zone:** Contains cleaned and processed data, ready for Power BI analysis. In this zone, null values are removed, inconsistencies are corrected, and tables are optimized. In this project, unnecessary columns were removed and *weather* data was partitioned by year to improve query performance.
 
-## Calidad del dato
+## Data Quality
 
-No se debe confiar ciegamente en los datos; incluso proviniendo de fuentes confiables, pueden contener valores no deseados. Por ello, es crucial validar la información y su veracidad. Los datos se validan mediante SQL, como en el siguiente ejemplo:
+Data should never be blindly trusted; even reliable sources may contain unwanted values. Therefore, validating data integrity is critical. Data validation is performed using SQL, for example:
 
 ```sql
 CASE
-	WHEN TRY_CAST(latitude AS DOUBLE) BETWEEN -90 AND 90 THEN CAST(latitude AS DOUBLE)
-	ELSE NULL
+    WHEN TRY_CAST(latitude AS DOUBLE) BETWEEN -90 AND 90 THEN CAST(latitude AS DOUBLE)
+    ELSE NULL
 END AS latitude
 ```
 
-Aun sabiendo que el campo corresponde a una latitud y contiene coordenadas, debemos validar esta información por seguridad e integridad de los datos.
+Even when a field represents latitude, validating its range ensures data safety and integrity.
 
-## Costos y optimización
+## Costs and Optimization
 
-AWS factura por datos escaneados y capacidad de cómputo, entre otros conceptos. Una estrategia para reducir costos en este proyecto fue ejecutar **Airflow dentro de un contenedor de Docker**, aprovechando los recursos locales en lugar de costear un clúster en la nube, el cual resulta más caro y complejo de mantener. El uso de contenedores permite, además, reproducir el entorno en cualquier máquina fácilmente. Por otro lado, dado que **Athena** cobra por el volumen de datos escaneados, la mejor solución fue implementar el formato **Parquet**. Esto redujo drásticamente el tamaño de los archivos (por ejemplo, un CSV de 30 MB se redujo a solo 128 kb), logrando que las consultas sean mucho más rápidas y económicas.
+AWS charges for data scanned and compute capacity. One cost-optimization strategy in this project was running **Airflow inside a Docker container**, leveraging local resources instead of provisioning a managed cloud cluster, which is more expensive and complex to maintain. Containers also make the environment easily reproducible.
+
+Additionally, since **Athena** charges based on the amount of data scanned, adopting the **Parquet** format was critical. This drastically reduced file sizes (for example, a 30 MB CSV was reduced to just 128 KB), making queries significantly faster and more cost-efficient.
 
 ## Trade-offs
 
-- **Airflow batch vs Streaming:** El actual pipeline esta orquestado por Airflow. Airflow no trabaja en tiempo real; si se necesitara obtener datos de un sensor ya sea de algún lugar para capturar data en minutos o segundos este ya dejaría de ser una buena decisión. El pipeline está diseñado para batch analytics. Para requisitos como baja latencia seria necesario optar por otro enfoque de streaming como Kinesis, aumentando la complejidad y costos.
-- **Glue + Athena vs Base de datos relacional:** Usar Glue y Athena permiten una arquitectura bajo demanda. a medida que la demanda crece tiene escalabilidad automática. Esta deja de ser buena opción cuando se requieren datos con baja latencia y cuando el patrón de consultas es repetitivo siempre en la misma data. Dado que el enfoque es analítico y no transaccional ni el dato depende o se relaciona con mas datos.
-- **Crawlers automaticos vs esquemas controlados**: Los crawlers aceleran la iteración inicial de definir esquemas para la base de datos. Ya que detectan automáticamente el tipo de valor y crean un esquema para los datos. Por otro lado se tiene menor control de esquemas y mas probabilidad a errores en la representación de cada dato en la etapa inicial en un entorno de producción.
-- **Raw + Clean en S3 vs transformación directa:** Separar el *data lake* en zonas Raw y Clean nos permiten trazabilidad cuando el volumen es pequeño y altamente confiable. Se prioriza reproducibilidad sobre simplicidad.
+- **Airflow Batch vs Streaming:** The current pipeline is orchestrated by Airflow, which is not designed for real-time processing. If near-real-time sensor data ingestion were required, Airflow would not be suitable. The pipeline is optimized for batch analytics. Low-latency requirements would require a streaming approach such as Kinesis, increasing both complexity and cost.
+- **Glue + Athena vs Relational Databases:** Glue and Athena enable an on-demand, automatically scalable architecture. However, they are not ideal for low-latency workloads or highly repetitive query patterns on the same datasets. This project is analytical rather than transactional.
+- **Automatic Crawlers vs Controlled Schemas:** Crawlers accelerate initial schema discovery by automatically detecting data types. However, they provide less control over schemas and increase the risk of representation errors in early production stages.
+- **Raw + Clean Zones vs Direct Transformation:** Separating the *data lake* into Raw and Clean zones prioritizes traceability and reproducibility over simplicity, especially when data volumes are manageable.
 
-## Consumidores del dato
+## Data Consumers
 
-Hoy en día este tipo de pipeline tiene gran valor ya que agrega bastante valor para los consumidores del dato, ya que permitirá realizar mediciones, predicciones o dashboards. Entre ellos están: 
+This type of pipeline delivers significant value to data consumers by enabling measurements, predictions, and dashboards. Typical consumers include:
 
-- Analistas de Negocio.
-- Analistas de datos.
-- Científicos de datos (ML/AI).
+- Business Analysts
+- Data Analysts
+- Data Scientists (ML/AI)
 
-## Limitaciones y mejoras futuras
+## Limitations and Future Improvements
 
-| Limitación                                                   | Impacto                                                      | Mejoras                                                      |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| Pipeline diseñado para procesamiento en batch y no soporta casos de uso como streaming | Los datos están disponibles con latencia de horas, lo cual si es eficiente para análisis histórico. | Para requerimientos como leer datos de un sensor en tiempo real con baja latencia, el pipeline podría evolucionar a servicios de streaming como Kinesis. |
-| La extracción se basa principalmente en el estado de ejecución de Airflow, el momento en donde el dato se obtiene. | No se detectan degradaciones en la calidad del dato, por ejemplo valores nulos. | Incorporar reglas de data quality mas avanzadas y métricas históricas permitirá detectar anomalías de forma temprana. |
+| Limitation | Impact | Improvements |
+|-----------|--------|--------------|
+| Pipeline designed for batch processing and does not support streaming use cases | Data availability has hours of latency, which is acceptable for historical analysis | For real-time, low-latency requirements, the pipeline could evolve toward streaming services such as Kinesis |
+| Extraction relies mainly on Airflow execution timing | Data quality degradation (e.g., null values) is not proactively detected | Adding advanced data quality rules and historical metrics would enable early anomaly detection |
 
-## Takeaways técnicos
+## Technical Takeaways
 
-- Diseñar el pipeline ELT sobre un data lake facilita su escalabilidad.
-- Una correcta partición de datos *weather* por año para un impacto de performance y costos.
-- Todas las decisiones tomadas a corto plazo son necesariametne optimas a largo plazo sin controles adicionales.
+- Designing an ELT pipeline on a data lake improves scalability.
+- Proper year-based partitioning of *weather* data significantly impacts performance and cost.
+- Short-term architectural decisions are not necessarily optimal long-term without additional governance and controls.
